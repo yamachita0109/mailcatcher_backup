@@ -1,7 +1,8 @@
 import Controller from './controller.js'
 
-const main = async () => {
-  await new Controller().exec()
+exports.handler = async (event) => {
+  await new Controller().exec(type)
+  return {
+    result: 'ok',
+  }
 }
-
-main()

@@ -1,0 +1,30 @@
+version: 0.2
+
+phases:
+  install:
+    commands:
+      - echo "Install started on `date`"
+      - n 16
+      - npm install -g yarn
+      - echo 'aws-cli install.'
+      - yum install -y aws-cli
+      - echo "Install completed on `date`"
+  pre_build:
+    commands:
+      - echo "Pre-Build started on `date`"
+      - echo "Pre-Build completed on `date`"
+  build:
+    commands:
+      - echo "Build started on `date`"
+      - yarn install --production=true
+      - zip -r app.zip controller.js main.js s3.js node_modules
+      - echo "Build completed on `date`"
+  post_build:
+    commands:
+      - echo "Post-Build started on `date`"
+      - aws cloudformation package --template-file template.yaml --s3-bucket $SOURCE_BUCKET_NAME --s3-prefix `date '+%Y%m%d%H%M%S'` --output-template-file packaged.yaml
+      - aws cloudformation deploy --region ap-northeast-1 --template-file packaged.yaml --stack-name $STACK_NAME --capabilities CAPABILITY_IAM
+      - echo "Post-Build completed on `date`"
+artifacts:
+  files:
+    - packaged.yaml

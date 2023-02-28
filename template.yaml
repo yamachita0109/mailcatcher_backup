@@ -1,0 +1,99 @@
+AWSTemplateFormatVersion: 2010-09-09
+Parameters:
+  VpcId:
+    Type: String
+
+  LambdaVpcConfigSubnetIds:
+    Type: CommaDelimitedList
+
+Resources:
+  Lambda:
+    Type: AWS::Lambda::Function
+    Properties:
+      Code: app.zip
+      FunctionName: mailcatcher_backup
+      Handler: main.handler
+      Runtime: nodejs16.x
+      Environment:
+        Variables:
+          URL: http://localhost:1080/messages
+          BUCKET: BUCKET_NAME
+      Role:
+        Fn::GetAtt:
+          - "Role"
+          - "Arn"
+      VpcConfig:
+        SecurityGroupIds:
+          - !Ref SecurityGroup
+        SubnetIds: !Ref LambdaVpcConfigSubnetIds
+      MemorySize: 512
+      Timeout: 180
+
+  EventRule:
+    Type: AWS::Events::Rule
+    Properties:
+      Description: mailcatcher backup rule.
+      ScheduleExpression: 'cron(0 21 * * ? *)'
+      State: ENABLED
+      Targets:
+      - Arn: !GetAtt 'Lambda.Arn'
+        Id: TargetFunctionV1
+
+  Role:
+    Type: "AWS::IAM::Role"
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - "edgelambda.amazonaws.com"
+                - "lambda.amazonaws.com"
+                - "s3.amazonaws.com"
+                - "cloudwatch.amazonaws.com"
+            Action:
+              - sts:AssumeRole
+      Policies:
+        - PolicyName: AWSLambdaVPCAccessExecutionRole
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - "logs:CreateLogGroup"
+                  - "logs:CreateLogStream"
+                  - "logs:PutLogEvents"
+                  - "ec2:CreateNetworkInterface"
+                  - "ec2:DescribeNetworkInterfaces"
+                  - "ec2:DeleteNetworkInterface"
+                  - "ec2:AssignPrivateIpAddresses"
+                  - "ec2:UnassignPrivateIpAddresses"
+                Resource: "*"
+        - PolicyName: AmazonS3FullAccess
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - "s3:*"
+                  - "s3-object-lambda:*"
+                Resource: "*"
+
+  LambdaInvokePermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      Action: lambda:InvokeFunction
+      FunctionName: !Ref Lambda
+      Principal: events.amazonaws.com
+      SourceArn: !GetAtt CriteoEventRule.Arn
+
+  SecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: mailcatcher backup rule.
+      SecurityGroupEgress:
+        - Description: all
+          CidrIp: 0.0.0.0/0
+          IpProtocol: -1
+      VpcId: !Ref VpcId
