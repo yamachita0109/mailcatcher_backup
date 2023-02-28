@@ -1,0 +1,14 @@
+{
+  "name": "mailcatcher_backup",
+  "version": "1.0.0",
+  "main": "index.js",
+  "repository": "https://github.com/yamachita0109/mailcatcher_backup.git",
+  "author": "Yamashita Kazumasa <yamachita0109@gmail.com>",
+  "license": "MIT",
+  "type": "module",
+  "dependencies": {
+    "aws-sdk": "^2.1324.0",
+    "date-utils": "^1.2.21",
+    "node-fetch": "^3.3.0"
+  }
+}
